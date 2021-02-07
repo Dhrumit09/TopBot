@@ -1,0 +1,31 @@
+image: theleede/dlo-runner:groovy
+
+cache:
+  paths:
+    - .m2/
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2"
+
+stages:
+  - build
+  - staging
+
+build:
+  stage: build
+  script:
+    - mvn $MAVEN_CLI_OPTS clean package
+  artifacts:
+    paths:
+      - target/*.jar
+    expire_in: 1 week
+
+deploy to canary:
+  stage: staging
+  only:
+    - develop
+  script:
+    - export SSHPASS=$USER_PASS
+    - cd target/
+    - sshpass -e scp -o stricthostkeychecking=no -r . $USER_NAME@$IP_ADDRESS:/opt/bots/groovy/canary/
+    - sshpass -e ssh -t $USER_NAME@$IP_ADDRESS "/opt/groovy.sh canary update"
